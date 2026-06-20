@@ -1,6 +1,62 @@
 const axios = require('axios');
 const { createCanvas } = require('canvas');
 
+/**
+ * Convert an RGBA canvas to a 24-bit BMP buffer.
+ * Canvas uses RGBA (4 bytes/pixel, row top-to-bottom).
+ * BMP 24-bit uses BGR (3 bytes/pixel, row bottom-to-top) with row padding to 4 bytes.
+ */
+function canvasToBmp24(canvas) {
+  const { width, height } = canvas;
+  const ctx = canvas.getContext('2d');
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const pixels = imageData.data; // RGBA, top-to-bottom
+
+  const rowSize = (width * 3 + 3) & ~3; // each row padded to 4-byte boundary
+  const pixelDataSize = rowSize * height;
+  const fileSize = 54 + pixelDataSize;
+
+  const buf = Buffer.alloc(fileSize);
+  let o = 0;
+
+  // --- BITMAPFILEHEADER (14 bytes) ---
+  buf.write('BM', o, 'ascii'); o += 2;
+  buf.writeUInt32LE(fileSize, o); o += 4;
+  o += 4; // reserved
+  buf.writeUInt32LE(54, o); o += 4; // pixel data offset
+
+  // --- BITMAPINFOHEADER (40 bytes) ---
+  buf.writeUInt32LE(40, o); o += 4;   // header size
+  buf.writeInt32LE(width, o); o += 4;
+  buf.writeInt32LE(height, o); o += 4; // positive = bottom-up
+  buf.writeUInt16LE(1, o); o += 2;    // color planes
+  buf.writeUInt16LE(24, o); o += 2;   // bits per pixel
+  buf.writeUInt32LE(0, o); o += 4;    // no compression
+  buf.writeUInt32LE(pixelDataSize, o); o += 4;
+  buf.writeInt32LE(2835, o); o += 4;  // horizontal resolution (72 DPI)
+  buf.writeInt32LE(2835, o); o += 4;  // vertical resolution
+  o += 4; // colors in palette
+  o += 4; // important colors
+
+  // --- Pixel data (bottom-up, BGR) ---
+  const rowPad = rowSize - width * 3;
+  const padBytes = Buffer.alloc(rowPad);
+
+  for (let y = height - 1; y >= 0; y--) {
+    const rowStart = y * width * 4;
+    for (let x = 0; x < width; x++) {
+      const p = rowStart + x * 4;
+      buf[o++] = pixels[p + 2]; // B
+      buf[o++] = pixels[p + 1]; // G
+      buf[o++] = pixels[p];     // R
+    }
+    if (rowPad) padBytes.copy(buf, o, 0, rowPad);
+    o += rowPad;
+  }
+
+  return buf;
+}
+
 module.exports = async function handler(req, res) {
   try {
     // 1. Fetch Current + Forecast
@@ -82,9 +138,9 @@ module.exports = async function handler(req, res) {
     const updateStr = `Updated: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
     ctx.fillText(updateStr, 40, 770);
 
-    // 3. Return as PNG response
-    const buffer = canvas.toBuffer('image/png');
-    res.setHeader('Content-Type', 'image/png');
+    // 3. Return as 24-bit BMP response
+    const buffer = canvasToBmp24(canvas);
+    res.setHeader('Content-Type', 'image/bmp');
     res.setHeader('Cache-Control', 'public, max-age=300');
     res.status(200).send(buffer);
 
