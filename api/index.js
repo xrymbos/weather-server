@@ -7,7 +7,7 @@ const path = require('path');
 // Both files under the same family name gives us normal + bold variants.
 const fontDir = path.join(__dirname, '..', 'fonts');
 PImage.registerFont(path.join(fontDir, 'NotoSans-Regular.ttf'), 'Noto Sans').loadSync();
-PImage.registerFont(path.join(fontDir, 'NotoSans-Bold.ttf'), 'Noto Sans').loadSync();
+PImage.registerFont(path.join(fontDir, 'NotoSans-Bold.ttf'), 'Noto Sans Bold').loadSync();
 
 /**
  * Convert an RGBA pixel buffer (top-to-bottom) to a 24-bit BMP buffer.
@@ -82,13 +82,13 @@ module.exports = async function handler(req, res) {
     ctx.font = '24px "Noto Sans"';
     ctx.fillText('SYDNEY, NSW', 40, 60);
 
-    ctx.font = 'bold 120px "Noto Sans"';
+    ctx.font = '120px "Noto Sans Bold"';
     ctx.fillText(`${Math.round(current.air_temp)}°`, 35, 200);
 
     ctx.font = '28px "Noto Sans"';
     ctx.fillText(todayForecast.short_text || 'Clear', 40, 250);
 
-    ctx.font = 'bold 24px "Noto Sans"';
+    ctx.font = '24px "Noto Sans Bold"';
     const hi = todayForecast.temp_max || '--';
     const lo = todayForecast.temp_min || (dailyForecasts[1] ? dailyForecasts[1].temp_min : '--');
     ctx.fillText(`L: ${lo}°  H: ${hi}°`, 40, 290);
@@ -122,7 +122,7 @@ module.exports = async function handler(req, res) {
         const date = new Date(f.date);
         const dayLabel = days[date.getDay()];
 
-        ctx.font = 'bold 24px "Noto Sans"';
+        ctx.font = '24px "Noto Sans Bold"';
         ctx.fillText(dayLabel, 40, y);
 
         ctx.textAlign = 'right';
