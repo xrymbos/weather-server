@@ -148,47 +148,47 @@ module.exports = async function handler(req, res) {
     ctx.fillStyle = '#000000';
 
     // --- TOP SECTION: Current Weather ---
-    ctx.font = '20px "Noto Sans"';
-    ctx.fillText('SYDNEY, NSW', 24, 36);
+    ctx.font = '18px "Noto Sans"';
+    ctx.fillText('SYDNEY, NSW', 24, 30);
 
-    // Current temp — big and bold
-    ctx.font = '140px "Noto Sans Bold"';
-    ctx.fillText(`${Math.round(current.air_temp)}°`, 20, 170);
+    // Current temp — big and bold, left side
+    const tempStr = `${Math.round(current.air_temp)}°`;
+    ctx.font = '130px "Noto Sans Bold"';
+    ctx.fillText(tempStr, 20, 148);
 
-    // Rain — prominent, right below temp
+    // Rain icon + chance/mm — right side of temp
     const rainAmt = todayForecast.rain?.amount;
     const todayMm = typeof rainAmt === 'object' ? (rainAmt.max ?? rainAmt.min ?? '--') : (rainAmt ?? '--');
-    ctx.font = '36px "Noto Sans Bold"';
-    ctx.fillText(`${todayForecast.rain.chance}% / ${todayMm}mm`, 24, 220);
+    const rainStr = `${todayForecast.rain.chance}% / ${todayMm}mm`;
+    ctx.font = '22px "Noto Sans Bold"';
+    const rainX = 280;
+    ctx.fillText(rainStr, rainX, 112);
 
-    // Condition text
-    ctx.font = '22px "Noto Sans"';
-    ctx.fillText(todayForecast.short_text || 'Clear', 24, 255);
-
-    // Hi / Lo
+    // Condition + Hi/Lo — right side, below rain
+    ctx.font = '20px "Noto Sans"';
+    ctx.fillText(todayForecast.short_text || 'Clear', rainX, 140);
     const hi = todayForecast.temp_max || '--';
     const lo = todayForecast.temp_min || (dailyForecasts[1] ? dailyForecasts[1].temp_min : '--');
-    ctx.font = '22px "Noto Sans Bold"';
-    ctx.fillText(`H: ${hi}°  L: ${lo}°`, 24, 290);
+    ctx.font = '20px "Noto Sans Bold"';
+    ctx.fillText(`H:${hi}° L:${lo}°`, rainX, 165);
 
-    // --- MIDDLE SECTION: Details ---
+    // --- MIDDLE SECTION: Details (two-column, tight) ---
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(24, 315); ctx.lineTo(456, 315); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(24, 185); ctx.lineTo(456, 185); ctx.stroke();
 
-    const drawDetail = (label, value, y) => {
-      ctx.font = '18px "Noto Sans"';
-      ctx.fillText(label, 24, y);
-      ctx.textAlign = 'right';
-      ctx.font = '18px "Noto Sans Bold"';
-      ctx.fillText(value, 456, y);
-      ctx.textAlign = 'left';
+    const drawDetail = (label, value, x, y) => {
+      ctx.font = '16px "Noto Sans"';
+      ctx.fillText(label, x, y);
+      ctx.font = '16px "Noto Sans Bold"';
+      ctx.fillText(value, x, y + 22);
     };
 
-    drawDetail('Humidity', `${current.rel_hum}%`, 348);
-    drawDetail('Wind', `${current.wind_spd_kmh} km/h ${current.wind_dir}`, 378);
+    drawDetail('Humidity', `${current.rel_hum}%`, 24, 200);
+    drawDetail('Wind', `${current.wind_spd_kmh} km/h ${current.wind_dir}`, 170, 200);
 
     // --- BOTTOM SECTION: Weekly Forecast ---
-    ctx.beginPath(); ctx.moveTo(24, 435); ctx.lineTo(456, 435); ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(24, 260); ctx.lineTo(456, 260); ctx.stroke();
 
     const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -196,7 +196,7 @@ module.exports = async function handler(req, res) {
         const f = dailyForecasts[i];
         if (!f) break;
 
-        const y = 450 + (i * 55);
+        const y = 275 + (i * 52);
         const date = new Date(f.date);
         const dayLabel = days[date.getDay()];
 
@@ -211,7 +211,7 @@ module.exports = async function handler(req, res) {
         const rawMm = f.rain?.amount;
         const mm = typeof rawMm === 'object' ? (rawMm.max ?? rawMm.min ?? '--') : (rawMm ?? '--');
         ctx.font = '16px "Noto Sans"';
-        ctx.fillText(`${rc}% / ${mm}mm`, 140, y);
+        ctx.fillText(`${rc}% / ${mm}mm`, 145, y);
 
         ctx.textAlign = 'right';
         ctx.font = '22px "Noto Sans Bold"';
