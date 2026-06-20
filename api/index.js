@@ -57,6 +57,75 @@ function rgbaToBmp24(width, height, pixels) {
   return buf;
 }
 
+// --- Weather icon drawing helpers (pure canvas primitives) ---
+
+/** Draw a simple sun icon (circle + rays) centered at (cx, cy). */
+function drawSun(ctx, cx, cy) {
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 2;
+  // Rays
+  const rayLen = 10;
+  const offsets = [
+    [-14, 0], [14, 0], [0, -14], [0, 14],
+    [-10, -10], [10, -10], [-10, 10], [10, 10],
+  ];
+  for (const [dx, dy] of offsets) {
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const ux = dx / len, uy = dy / len;
+    ctx.beginPath();
+    ctx.moveTo(cx + ux * 8, cy + uy * 8);
+    ctx.lineTo(cx + ux * (8 + rayLen), cy + uy * (8 + rayLen));
+    ctx.stroke();
+  }
+  // Circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** Draw a simple cloud shape (overlapping circles) centered at (cx, cy). */
+function drawCloud(ctx, cx, cy) {
+  ctx.fillStyle = '#000000';
+  // Three overlapping circles forming a cloud puff
+  ctx.beginPath(); ctx.arc(cx - 6, cy + 2, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 6, cy + 2, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy - 4, 8, 0, Math.PI * 2); ctx.fill();
+  // Flat bottom
+  ctx.fillRect(cx - 12, cy + 2, 24, 6);
+}
+
+/** Draw a cloud with raindrop lines underneath, centered at (cx, cy). */
+function drawRainCloud(ctx, cx, cy) {
+  drawCloud(ctx, cx, cy);
+  // Raindrops
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 2;
+  const drops = [-6, 0, 6];
+  for (const dx of drops) {
+    ctx.beginPath();
+    ctx.moveTo(cx + dx, cy + 10);
+    ctx.lineTo(cx + dx - 2, cy + 18);
+    ctx.stroke();
+  }
+}
+
+/**
+ * Pick and draw the right weather icon for a forecast entry.
+ * @param {object} f - daily forecast object from BOM API
+ */
+function drawWeatherIcon(ctx, f, cx, cy) {
+  const text = (f.short_text || '').toLowerCase();
+  const rainChance = f.rain?.chance ?? 0;
+  if (rainChance >= 50 || text.includes('rain') || text.includes('shower')) {
+    drawRainCloud(ctx, cx, cy);
+  } else if (rainChance < 30 || text.includes('sunny') || text.includes('clear')) {
+    drawSun(ctx, cx, cy);
+  } else {
+    drawCloud(ctx, cx, cy);
+  }
+}
+
 module.exports = async function handler(req, res) {
   try {
     // 1. Fetch Current + Forecast
@@ -122,8 +191,11 @@ module.exports = async function handler(req, res) {
         const date = new Date(f.date);
         const dayLabel = days[date.getDay()];
 
+        // Draw weather icon to the left of the day label
+        drawWeatherIcon(ctx, f, 56, y - 8);
+
         ctx.font = '24px "Noto Sans Bold"';
-        ctx.fillText(dayLabel, 40, y);
+        ctx.fillText(dayLabel, 80, y);
 
         ctx.textAlign = 'right';
         ctx.font = '24px "Noto Sans"';
