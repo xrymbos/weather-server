@@ -1,22 +1,19 @@
 const axios = require('axios');
-const { createCanvas, GlobalFonts } = require('@napi-rs/canvas');
+const PImage = require('pureimage');
 const path = require('path');
 
-// Register bundled fonts so text renders correctly everywhere (Vercel has no
-// system fonts).  registerFromPath auto-detects weight/style from the font's
-// internal metadata, so registering both files under the same alias gives us
-// a single "Noto Sans" family with normal + bold variants.
-const fontDir = path.join(__dirname, 'fonts');
-GlobalFonts.registerFromPath(path.join(fontDir, 'NotoSans-Regular.ttf'), 'Noto Sans');
-GlobalFonts.registerFromPath(path.join(fontDir, 'NotoSans-Bold.ttf'), 'Noto Sans');
+// Register bundled fonts — pureimage uses opentype.js (pure JS) to parse TTF
+// files and rasterize glyphs.  Fonts must be loadSync()'d before use.
+// Both files under the same family name gives us normal + bold variants.
+const fontDir = path.join(__dirname, '..', 'fonts');
+PImage.registerFont(path.join(fontDir, 'NotoSans-Regular.ttf'), 'Noto Sans').loadSync();
+PImage.registerFont(path.join(fontDir, 'NotoSans-Bold.ttf'), 'Noto Sans').loadSync();
 
 /**
- * Convert an RGBA canvas (from canvas.data()) to a 24-bit BMP buffer.
+ * Convert an RGBA pixel buffer (top-to-bottom) to a 24-bit BMP buffer.
  * BMP 24-bit uses BGR (3 bytes/pixel, row bottom-to-top) with row padding to 4 bytes.
  */
-function canvasToBmp24(canvas, pixels) {
-  const { width, height } = canvas;
-
+function rgbaToBmp24(width, height, pixels) {
   const rowSize = (width * 3 + 3) & ~3; // each row padded to 4-byte boundary
   const pixelDataSize = rowSize * height;
   const fileSize = 54 + pixelDataSize;
@@ -73,8 +70,8 @@ module.exports = async function handler(req, res) {
     const todayForecast = dailyForecasts[0];
 
     // 2. Setup Canvas
-    const canvas = createCanvas(480, 800);
-    const ctx = canvas.getContext('2d');
+    const img = PImage.make(480, 800);
+    const ctx = img.getContext('2d');
 
     // Background
     ctx.fillStyle = '#FFFFFF';
@@ -142,8 +139,8 @@ module.exports = async function handler(req, res) {
     ctx.fillText(updateStr, 40, 770);
 
     // 3. Return as 24-bit BMP response
-    const pixels = canvas.data(); // RGBA buffer, top-to-bottom
-    const buffer = canvasToBmp24(canvas, pixels);
+    const pixels = new Uint8Array(img.data); // RGBA, top-to-bottom
+    const buffer = rgbaToBmp24(480, 800, pixels);
     res.writeHead(200, {
       'Content-Type': 'image/bmp',
       'Cache-Control': 'public, max-age=300',
