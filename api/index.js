@@ -1,3 +1,7 @@
+// Disable Fontconfig before canvas loads — it doesn't exist on Vercel's
+// serverless Linux runtime and would throw "Cannot load default config file".
+if (!process.env.FONTCONFIG_PATH) process.env.FONTCONFIG_PATH = '/dev/null';
+
 const axios = require('axios');
 const { createCanvas, registerFont } = require('canvas');
 const path = require('path');
