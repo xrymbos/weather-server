@@ -1,34 +1,21 @@
-// Disable Fontconfig before canvas loads — it doesn't exist on Vercel's
-// serverless Linux runtime and would throw "Cannot load default config file".
-if (!process.env.FONTCONFIG_PATH) process.env.FONTCONFIG_PATH = '/dev/null';
-
 const axios = require('axios');
-const { createCanvas, registerFont } = require('canvas');
+const { createCanvas, GlobalFonts } = require('@napi-rs/canvas');
 const path = require('path');
-const fs = require('fs');
 
-// Register bundled font(s) so canvas can render text on systems without
-// system fonts (e.g. Vercel serverless).  Any .ttf placed in fonts/ will
-// be picked up automatically.
+// Register bundled fonts so text renders correctly everywhere (Vercel has no
+// system fonts).  registerFromPath auto-detects weight/style from the font's
+// internal metadata, so registering both files under the same alias gives us
+// a single "Noto Sans" family with normal + bold variants.
 const fontDir = path.join(__dirname, 'fonts');
-if (fs.existsSync(fontDir)) {
-  for (const f of fs.readdirSync(fontDir)) {
-    if (f.endsWith('.ttf') || f.endsWith('.otf')) {
-      registerFont(path.join(fontDir, f), { family: 'Noto Sans' });
-    }
-  }
-}
+GlobalFonts.registerFromPath(path.join(fontDir, 'NotoSans-Regular.ttf'), 'Noto Sans');
+GlobalFonts.registerFromPath(path.join(fontDir, 'NotoSans-Bold.ttf'), 'Noto Sans');
 
 /**
- * Convert an RGBA canvas to a 24-bit BMP buffer.
- * Canvas uses RGBA (4 bytes/pixel, row top-to-bottom).
+ * Convert an RGBA canvas (from canvas.data()) to a 24-bit BMP buffer.
  * BMP 24-bit uses BGR (3 bytes/pixel, row bottom-to-top) with row padding to 4 bytes.
  */
-function canvasToBmp24(canvas) {
+function canvasToBmp24(canvas, pixels) {
   const { width, height } = canvas;
-  const ctx = canvas.getContext('2d');
-  const imageData = ctx.getImageData(0, 0, width, height);
-  const pixels = imageData.data; // RGBA, top-to-bottom
 
   const rowSize = (width * 3 + 3) & ~3; // each row padded to 4-byte boundary
   const pixelDataSize = rowSize * height;
@@ -58,7 +45,6 @@ function canvasToBmp24(canvas) {
 
   // --- Pixel data (bottom-up, BGR) ---
   const rowPad = rowSize - width * 3;
-  const padBytes = Buffer.alloc(rowPad);
 
   for (let y = height - 1; y >= 0; y--) {
     const rowStart = y * width * 4;
@@ -68,8 +54,7 @@ function canvasToBmp24(canvas) {
       buf[o++] = pixels[p + 1]; // G
       buf[o++] = pixels[p];     // R
     }
-    if (rowPad) padBytes.copy(buf, o, 0, rowPad);
-    o += rowPad;
+    o += rowPad; // skip padding bytes (zeroed by alloc)
   }
 
   return buf;
@@ -157,13 +142,17 @@ module.exports = async function handler(req, res) {
     ctx.fillText(updateStr, 40, 770);
 
     // 3. Return as 24-bit BMP response
-    const buffer = canvasToBmp24(canvas);
-    res.setHeader('Content-Type', 'image/bmp');
-    res.setHeader('Cache-Control', 'public, max-age=300');
-    res.status(200).send(buffer);
+    const pixels = canvas.data(); // RGBA buffer, top-to-bottom
+    const buffer = canvasToBmp24(canvas, pixels);
+    res.writeHead(200, {
+      'Content-Type': 'image/bmp',
+      'Cache-Control': 'public, max-age=300',
+    });
+    res.end(buffer);
 
   } catch (error) {
-    console.error('Error:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('Error:', error);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: error.message }));
   }
 };
