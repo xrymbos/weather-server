@@ -148,67 +148,83 @@ module.exports = async function handler(req, res) {
     ctx.fillStyle = '#000000';
 
     // --- TOP SECTION: Current Weather ---
-    ctx.font = '24px "Noto Sans"';
-    ctx.fillText('SYDNEY, NSW', 40, 60);
+    ctx.font = '20px "Noto Sans"';
+    ctx.fillText('SYDNEY, NSW', 24, 36);
 
-    ctx.font = '120px "Noto Sans Bold"';
-    ctx.fillText(`${Math.round(current.air_temp)}°`, 35, 200);
+    // Current temp — big and bold
+    ctx.font = '140px "Noto Sans Bold"';
+    ctx.fillText(`${Math.round(current.air_temp)}°`, 20, 170);
 
-    ctx.font = '28px "Noto Sans"';
-    ctx.fillText(todayForecast.short_text || 'Clear', 40, 250);
+    // Rain — prominent, right below temp
+    const rainAmt = todayForecast.rain?.amount;
+    const todayMm = typeof rainAmt === 'object' ? (rainAmt.max ?? rainAmt.min ?? '--') : (rainAmt ?? '--');
+    ctx.font = '36px "Noto Sans Bold"';
+    ctx.fillText(`${todayForecast.rain.chance}% / ${todayMm}mm`, 24, 220);
 
-    ctx.font = '24px "Noto Sans Bold"';
+    // Condition text
+    ctx.font = '22px "Noto Sans"';
+    ctx.fillText(todayForecast.short_text || 'Clear', 24, 255);
+
+    // Hi / Lo
     const hi = todayForecast.temp_max || '--';
     const lo = todayForecast.temp_min || (dailyForecasts[1] ? dailyForecasts[1].temp_min : '--');
-    ctx.fillText(`L: ${lo}°  H: ${hi}°`, 40, 290);
+    ctx.font = '22px "Noto Sans Bold"';
+    ctx.fillText(`H: ${hi}°  L: ${lo}°`, 24, 290);
 
     // --- MIDDLE SECTION: Details ---
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(40, 330); ctx.lineTo(440, 330); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(24, 315); ctx.lineTo(456, 315); ctx.stroke();
 
     const drawDetail = (label, value, y) => {
-      ctx.font = '20px "Noto Sans"';
-      ctx.fillText(label, 40, y);
+      ctx.font = '18px "Noto Sans"';
+      ctx.fillText(label, 24, y);
       ctx.textAlign = 'right';
-      ctx.fillText(value, 440, y);
+      ctx.font = '18px "Noto Sans Bold"';
+      ctx.fillText(value, 456, y);
       ctx.textAlign = 'left';
     };
 
-    drawDetail('Humidity', `${current.rel_hum}%`, 370);
-    drawDetail('Wind', `${current.wind_spd_kmh} km/h ${current.wind_dir}`, 410);
-    drawDetail('Rain Chance', `${todayForecast.rain.chance}%`, 450);
+    drawDetail('Humidity', `${current.rel_hum}%`, 348);
+    drawDetail('Wind', `${current.wind_spd_kmh} km/h ${current.wind_dir}`, 378);
 
     // --- BOTTOM SECTION: Weekly Forecast ---
-    ctx.beginPath(); ctx.moveTo(40, 490); ctx.lineTo(440, 490); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(24, 435); ctx.lineTo(456, 435); ctx.stroke();
 
     const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 5; i++) {
         const f = dailyForecasts[i];
         if (!f) break;
 
-        const y = 500 + (i * 60);
+        const y = 450 + (i * 55);
         const date = new Date(f.date);
         const dayLabel = days[date.getDay()];
 
         // Draw weather icon to the left of the day label
-        drawWeatherIcon(ctx, f, 56, y - 8);
+        drawWeatherIcon(ctx, f, 36, y - 8);
 
-        ctx.font = '24px "Noto Sans Bold"';
-        ctx.fillText(dayLabel, 80, y);
+        ctx.font = '22px "Noto Sans Bold"';
+        ctx.fillText(dayLabel, 60, y);
+
+        // Rain chance + amount inline
+        const rc = f.rain?.chance ?? 0;
+        const rawMm = f.rain?.amount;
+        const mm = typeof rawMm === 'object' ? (rawMm.max ?? rawMm.min ?? '--') : (rawMm ?? '--');
+        ctx.font = '16px "Noto Sans"';
+        ctx.fillText(`${rc}% / ${mm}mm`, 140, y);
 
         ctx.textAlign = 'right';
-        ctx.font = '24px "Noto Sans"';
+        ctx.font = '22px "Noto Sans Bold"';
         const range = `${f.temp_max || '--'}° / ${f.temp_min || '--'}°`;
-        ctx.fillText(range, 440, y);
+        ctx.fillText(range, 456, y);
         ctx.textAlign = 'left';
     }
 
     // Footer
     const now = new Date();
-    ctx.font = '16px "Noto Sans"';
+    ctx.font = '14px "Noto Sans"';
     const updateStr = `Updated: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-    ctx.fillText(updateStr, 40, 770);
+    ctx.fillText(updateStr, 24, 780);
 
     // 3. Return as 24-bit BMP response
     const pixels = new Uint8Array(img.data); // RGBA, top-to-bottom
