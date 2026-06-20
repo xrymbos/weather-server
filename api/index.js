@@ -166,16 +166,14 @@ module.exports = async function handler(req, res) {
     const rainAmt = todayForecast.rain?.amount;
     const todayMm = typeof rainAmt === 'object' ? (rainAmt.max ?? rainAmt.min ?? '--') : (rainAmt ?? '--');
     const rainX = 280;
-    ctx.font = '80px "Noto Sans Bold"';
-    ctx.fillText(`${todayMm}mm`, rainX, 130);
+    ctx.font = '130px "Noto Sans Bold"';
+    ctx.fillText(`${todayMm}`, rainX, 148);
+    ctx.font = '40px "Noto Sans Bold"';
+    ctx.fillText('mm', rainX + 70, 148);
 
     // Rain chance — below mm
-    ctx.font = '24px "Noto Sans"';
-    ctx.fillText(`${todayForecast.rain.chance}% chance`, rainX, 165);
-
-    // Condition — below rain chance
-    ctx.font = '20px "Noto Sans"';
-    ctx.fillText(todayForecast.short_text || 'Clear', rainX, 190);
+    ctx.font = '24px "Noto Sans Bold"';
+    ctx.fillText(`${todayForecast.rain.chance}% chance`, rainX, 180);
 
     // --- MIDDLE SECTION: Details (two-column, tight) ---
     ctx.fillStyle = '#000000';
@@ -188,8 +186,10 @@ module.exports = async function handler(req, res) {
       ctx.fillText(value, x, y + 22);
     };
 
-    drawDetail('Humidity', `${current.rel_hum}%`, 24, 220);
-    drawDetail('Wind', `${current.wind_spd_kmh} km/h ${current.wind_dir}`, 170, 220);
+    drawDetail('Humidity', `${current.rel_hum}%`, 24, 230);
+    drawDetail('Wind', `${current.wind_spd_kmh} km/h ${current.wind_dir}`, 170, 230);
+    drawDetail('Condition', todayForecast.short_text || 'Clear', 350, 230);
+
 
     // --- BOTTOM SECTION: Weekly Forecast ---
     ctx.fillStyle = '#000000';
