@@ -1,5 +1,19 @@
 const axios = require('axios');
-const { createCanvas } = require('canvas');
+const { createCanvas, registerFont } = require('canvas');
+const path = require('path');
+const fs = require('fs');
+
+// Register bundled font(s) so canvas can render text on systems without
+// system fonts (e.g. Vercel serverless).  Any .ttf placed in fonts/ will
+// be picked up automatically.
+const fontDir = path.join(__dirname, 'fonts');
+if (fs.existsSync(fontDir)) {
+  for (const f of fs.readdirSync(fontDir)) {
+    if (f.endsWith('.ttf') || f.endsWith('.otf')) {
+      registerFont(path.join(fontDir, f), { family: 'Noto Sans' });
+    }
+  }
+}
 
 /**
  * Convert an RGBA canvas to a 24-bit BMP buffer.
@@ -79,16 +93,16 @@ module.exports = async function handler(req, res) {
     ctx.fillStyle = '#000000';
 
     // --- TOP SECTION: Current Weather ---
-    ctx.font = '24px sans-serif';
+    ctx.font = '24px "Noto Sans"';
     ctx.fillText('SYDNEY, NSW', 40, 60);
 
-    ctx.font = 'bold 120px sans-serif';
+    ctx.font = 'bold 120px "Noto Sans"';
     ctx.fillText(`${Math.round(current.air_temp)}°`, 35, 200);
 
-    ctx.font = '28px sans-serif';
+    ctx.font = '28px "Noto Sans"';
     ctx.fillText(todayForecast.short_text || 'Clear', 40, 250);
 
-    ctx.font = 'bold 24px sans-serif';
+    ctx.font = 'bold 24px "Noto Sans"';
     const hi = todayForecast.temp_max || '--';
     const lo = todayForecast.temp_min || (dailyForecasts[1] ? dailyForecasts[1].temp_min : '--');
     ctx.fillText(`L: ${lo}°  H: ${hi}°`, 40, 290);
@@ -98,7 +112,7 @@ module.exports = async function handler(req, res) {
     ctx.beginPath(); ctx.moveTo(40, 330); ctx.lineTo(440, 330); ctx.stroke();
 
     const drawDetail = (label, value, y) => {
-      ctx.font = '20px sans-serif';
+      ctx.font = '20px "Noto Sans"';
       ctx.fillText(label, 40, y);
       ctx.textAlign = 'right';
       ctx.fillText(value, 440, y);
@@ -122,11 +136,11 @@ module.exports = async function handler(req, res) {
         const date = new Date(f.date);
         const dayLabel = days[date.getDay()];
 
-        ctx.font = 'bold 24px sans-serif';
+        ctx.font = 'bold 24px "Noto Sans"';
         ctx.fillText(dayLabel, 40, y);
 
         ctx.textAlign = 'right';
-        ctx.font = '24px sans-serif';
+        ctx.font = '24px "Noto Sans"';
         const range = `${f.temp_max || '--'}° / ${f.temp_min || '--'}°`;
         ctx.fillText(range, 440, y);
         ctx.textAlign = 'left';
@@ -134,7 +148,7 @@ module.exports = async function handler(req, res) {
 
     // Footer
     const now = new Date();
-    ctx.font = '16px sans-serif';
+    ctx.font = '16px "Noto Sans"';
     const updateStr = `Updated: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
     ctx.fillText(updateStr, 40, 770);
 
