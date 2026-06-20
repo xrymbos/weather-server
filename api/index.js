@@ -156,25 +156,30 @@ module.exports = async function handler(req, res) {
     ctx.font = '130px "Noto Sans Bold"';
     ctx.fillText(tempStr, 20, 148);
 
-    // Rain icon + chance/mm — right side of temp
-    const rainAmt = todayForecast.rain?.amount;
-    const todayMm = typeof rainAmt === 'object' ? (rainAmt.max ?? rainAmt.min ?? '--') : (rainAmt ?? '--');
-    const rainStr = `${todayForecast.rain.chance}% / ${todayMm}mm`;
-    ctx.font = '22px "Noto Sans Bold"';
-    const rainX = 280;
-    ctx.fillText(rainStr, rainX, 112);
-
-    // Condition + Hi/Lo — right side, below rain
-    ctx.font = '20px "Noto Sans"';
-    ctx.fillText(todayForecast.short_text || 'Clear', rainX, 140);
+    // Hi / Lo — directly below temp
     const hi = todayForecast.temp_max || '--';
     const lo = todayForecast.temp_min || (dailyForecasts[1] ? dailyForecasts[1].temp_min : '--');
-    ctx.font = '20px "Noto Sans Bold"';
-    ctx.fillText(`H:${hi}° L:${lo}°`, rainX, 165);
+    ctx.font = '22px "Noto Sans Bold"';
+    ctx.fillText(`H:${hi}° L:${lo}°`, 24, 180);
+
+    // Rain mm — big, right side
+    const rainAmt = todayForecast.rain?.amount;
+    const todayMm = typeof rainAmt === 'object' ? (rainAmt.max ?? rainAmt.min ?? '--') : (rainAmt ?? '--');
+    const rainX = 280;
+    ctx.font = '80px "Noto Sans Bold"';
+    ctx.fillText(`${todayMm}mm`, rainX, 130);
+
+    // Rain chance — below mm
+    ctx.font = '24px "Noto Sans"';
+    ctx.fillText(`${todayForecast.rain.chance}% chance`, rainX, 165);
+
+    // Condition — below rain chance
+    ctx.font = '20px "Noto Sans"';
+    ctx.fillText(todayForecast.short_text || 'Clear', rainX, 190);
 
     // --- MIDDLE SECTION: Details (two-column, tight) ---
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(24, 185); ctx.lineTo(456, 185); ctx.stroke();
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(24, 205, 432, 2);
 
     const drawDetail = (label, value, x, y) => {
       ctx.font = '16px "Noto Sans"';
@@ -183,12 +188,12 @@ module.exports = async function handler(req, res) {
       ctx.fillText(value, x, y + 22);
     };
 
-    drawDetail('Humidity', `${current.rel_hum}%`, 24, 200);
-    drawDetail('Wind', `${current.wind_spd_kmh} km/h ${current.wind_dir}`, 170, 200);
+    drawDetail('Humidity', `${current.rel_hum}%`, 24, 220);
+    drawDetail('Wind', `${current.wind_spd_kmh} km/h ${current.wind_dir}`, 170, 220);
 
     // --- BOTTOM SECTION: Weekly Forecast ---
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(24, 260); ctx.lineTo(456, 260); ctx.stroke();
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(24, 275, 432, 2);
 
     const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -196,7 +201,7 @@ module.exports = async function handler(req, res) {
         const f = dailyForecasts[i];
         if (!f) break;
 
-        const y = 275 + (i * 52);
+        const y = 290 + (i * 52);
         const date = new Date(f.date);
         const dayLabel = days[date.getDay()];
 
